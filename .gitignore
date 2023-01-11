@@ -9,3 +9,5 @@ __pycache__/
 *.kdev4*
 .vscode/
 *.yaml
+*.txt
+*.json
