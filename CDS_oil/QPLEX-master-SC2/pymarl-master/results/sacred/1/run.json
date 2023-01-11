@@ -1,0 +1,110 @@
+{
+  "artifacts": [],
+  "command": "my_main",
+  "experiment": {
+    "base_dir": "D:\\CDS\\CDS_oil\\QPLEX-master-SC2\\pymarl-master\\src",
+    "dependencies": [
+      "munch==2.5.0",
+      "numpy==1.21.5",
+      "PyYAML==6.0",
+      "sacred==0.8.2",
+      "torch==1.13.0"
+    ],
+    "mainfile": "main.py",
+    "name": "pymarl",
+    "repositories": [
+      {
+        "commit": "5eb2fb29c1efa34f6a066cc043c2146a616c62b8",
+        "dirty": false,
+        "url": "https://github.com/Locke637/CDS.git"
+      },
+      {
+        "commit": "5eb2fb29c1efa34f6a066cc043c2146a616c62b8",
+        "dirty": false,
+        "url": "https://github.com/Locke637/CDS.git"
+      },
+      {
+        "commit": "5eb2fb29c1efa34f6a066cc043c2146a616c62b8",
+        "dirty": false,
+        "url": "https://github.com/Locke637/CDS.git"
+      }
+    ],
+    "sources": [
+      [
+        "main.py",
+        "_sources\\main_cfe058b647d66189c474d47251e88a08.py"
+      ],
+      [
+        "run.py",
+        "_sources\\run_c2e57e3081d7de9226374fe655ef136a.py"
+      ],
+      [
+        "utils\\logging.py",
+        "_sources\\logging_bd75934ff9d89a9edf105131b07e202e.py"
+      ]
+    ]
+  },
+  "fail_trace": [
+    "Traceback (most recent call last):\n",
+    "  File \"C:\\Users\\N2207908A\\Anaconda3\\lib\\site-packages\\sacred\\config\\captured_function.py\", line 42, in captured_function\n    result = wrapped(*args, **kwargs)\n",
+    "  File \"D:\\CDS\\CDS_oil\\QPLEX-master-SC2\\pymarl-master\\src\\main.py\", line 35, in my_main\n    run(_run, config, _log)\n",
+    "  File \"D:\\CDS\\CDS_oil\\QPLEX-master-SC2\\pymarl-master\\src\\run.py\", line 53, in run\n    run_sequential(args=args, logger=logger)\n",
+    "  File \"D:\\CDS\\CDS_oil\\QPLEX-master-SC2\\pymarl-master\\src\\run.py\", line 98, in run_sequential\n    runner = r_REGISTRY[args.runner](args=args, logger=logger)\n",
+    "  File \"D:\\CDS\\CDS_oil\\QPLEX-master-SC2\\pymarl-master\\src\\runners\\episode_runner.py\", line 18, in __init__\n    self.env = env_REGISTRY[self.args.env](**self.args.env_args)\n",
+    "TypeError: __init__() got an unexpected keyword argument 'continuing_episode'\n"
+  ],
+  "heartbeat": "2022-12-27T11:49:59.720476",
+  "host": {
+    "ENV": {},
+    "cpu": "Unknown",
+    "gpus": {
+      "driver_version": "512.77",
+      "gpus": [
+        {
+          "model": "NVIDIA GeForce RTX 3060",
+          "persistence_mode": false,
+          "total_memory": 12288
+        }
+      ]
+    },
+    "hostname": "AIR18",
+    "os": [
+      "Windows",
+      "Windows-10-10.0.22621-SP0"
+    ],
+    "python_version": "3.9.13"
+  },
+  "meta": {
+    "command": "my_main",
+    "options": {
+      "--beat-interval": null,
+      "--capture": null,
+      "--comment": null,
+      "--debug": false,
+      "--enforce_clean": false,
+      "--file_storage": null,
+      "--force": false,
+      "--help": false,
+      "--loglevel": null,
+      "--mongo_db": null,
+      "--name": null,
+      "--pdb": false,
+      "--print-config": false,
+      "--priority": null,
+      "--queue": false,
+      "--s3": null,
+      "--sql": null,
+      "--tiny_db": null,
+      "--unobserved": false,
+      "COMMAND": null,
+      "UPDATE": [],
+      "help": false,
+      "with": false
+    }
+  },
+  "resources": [],
+  "result": null,
+  "start_time": "2022-12-27T11:49:58.441284",
+  "status": "FAILED",
+  "stop_time": "2022-12-27T11:49:59.730007"
+}
