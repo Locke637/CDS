@@ -27,8 +27,7 @@ class Qatten_Weight(nn.Module):
 
         hypernet_embed = self.args.hypernet_embed
         for i in range(self.n_head):  # multi-head attention
-            selector_nn = nn.Sequential(
-                nn.Linear(self.state_dim, hypernet_embed), nn.ReLU(), nn.Linear(hypernet_embed, self.embed_dim, bias=False))
+            selector_nn = nn.Sequential(nn.Linear(self.state_dim, hypernet_embed), nn.ReLU(), nn.Linear(hypernet_embed, self.embed_dim, bias=False))
             self.selector_extractors.append(selector_nn)  # query
             if self.args.nonlinear:  # add qs
                 self.key_extractors.append(nn.Linear(self.unit_dim + 1, self.embed_dim, bias=False))  # key

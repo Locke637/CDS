@@ -55,11 +55,14 @@ class EpisodeBatch:
             group = field_info.get("group", None)
             dtype = field_info.get("dtype", th.float32)
 
-            if isinstance(vshape, int):
+            if isinstance(vshape, int) or isinstance(vshape, np.int32):
                 vshape = (vshape,)
 
             if group:
                 assert group in groups, "Group {} must have its number of members defined in _groups_".format(group)
+                # print(groups[group])
+                # print(vshape)
+                # shape = (groups[group], vshape)
                 shape = (groups[group], *vshape)
             else:
                 shape = vshape

@@ -83,8 +83,6 @@ if __name__ == '__main__':
     # Load algorithm and env base configs
     env_config = _get_config(params, "--env-config", "envs")
     alg_config = _get_config(params, "--config", "algs")
-    # alg_config = 'qplex_qatten_sc2'
-    # env_config = 'sc2_corridor'
     # config_dict = {**config_dict, **env_config, **alg_config}
     config_dict = recursive_dict_update(config_dict, env_config)
     config_dict = recursive_dict_update(config_dict, alg_config)
