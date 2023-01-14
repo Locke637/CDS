@@ -7,6 +7,9 @@ from components.episode_buffer import EpisodeBatch
 # from envs import REGISTRY as env_REGISTRY
 import magent
 import wandb
+import os
+
+os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 
 # wandb.config.update(args)
 
@@ -122,9 +125,9 @@ def get_config_bridge(map_size):
 
     cfg.set({"map_width": map_size, "map_height": map_size})
 
-    predator = cfg.register_agent_type("predator", {'width': 1, 'length': 1, 'hp': 1, 'speed': 1, 'damage': 1, 'view_range': gw.CircleRange(5), 'attack_range': gw.CircleRange(0), 'attack_penalty': 0})
+    predator = cfg.register_agent_type("predator", {'width': 1, 'length': 1, 'hp': 1, 'speed': 1, 'damage': 2, 'view_range': gw.CircleRange(5), 'attack_range': gw.CircleRange(1), 'attack_penalty': 0})
 
-    prey = cfg.register_agent_type("prey", {'width': 1, 'length': 1, 'hp': 1, 'step_recover': 1, 'speed': 0, 'view_range': gw.CircleRange(4), 'attack_range': gw.CircleRange(0)})
+    prey = cfg.register_agent_type("prey", {'width': 1, 'length': 1, 'hp': 1, 'step_recover': 0, 'speed': 0, 'view_range': gw.CircleRange(4), 'attack_range': gw.CircleRange(0)})
 
     predator_group = cfg.add_group(predator)
     prey_group = cfg.add_group(prey)
@@ -138,7 +141,7 @@ def get_config_pursuit_attack(map_size):
     cfg.set({"map_width": map_size, "map_height": map_size})
 
     # -0.3 -0.15 0
-    predator = cfg.register_agent_type("predator", {'width': 1, 'length': 1, 'hp': 1, 'speed': 1, 'view_range': gw.CircleRange(5), 'attack_range': gw.CircleRange(1), 'attack_penalty': -0.15})
+    predator = cfg.register_agent_type("predator", {'width': 1, 'length': 1, 'hp': 1, 'speed': 1, 'view_range': gw.CircleRange(5), 'attack_range': gw.CircleRange(1), 'attack_penalty': -0.2})
 
     prey = cfg.register_agent_type("prey", {'width': 1, 'length': 1, 'hp': 1, 'speed': 0, 'view_range': gw.CircleRange(4), 'attack_range': gw.CircleRange(0)})
 
@@ -170,8 +173,8 @@ class EpisodeRunner:
         self.logger = logger
         self.batch_size = self.args.batch_size_run
         assert self.batch_size == 1
-        self.args.env_name = 'bridge'
-        if self.args.env_name == 'pursuit':
+        self.args.env_name = 'bridge_base'
+        if self.args.env_name == 'pursuit_hard':
             map_size = 6
             self.args.map_size = map_size
             self.n_agents = 3
@@ -195,11 +198,11 @@ class EpisodeRunner:
             self.args.more_walls = 0
             cfg = get_config_double_attack_hard(map_size)
             env = magent.GridWorld(cfg)
-        elif self.args.env_name == 'bridge':
+        elif self.args.env_name == 'bridge_base':
             map_size = 11  # 80 30
             self.args.map_size = map_size
             self.n_agents = 4  # 6
-            self.args.more_enemy = -3
+            self.args.more_enemy = -2
             self.args.more_walls = 0
             cfg = get_config_bridge(map_size)
             env = magent.GridWorld(cfg)
@@ -227,8 +230,8 @@ class EpisodeRunner:
         self.state_shape = state_shape
         self.coding = False
         if not self.coding:
-            name = 'cds_' + self.args.env_name + '_02a'
-            wandb.init(project="hierarchical MARL", entity="637-muiltagent", name=name, notes='-0.15')
+            name = 'cds_' + self.args.env_name + '_12a'
+            wandb.init(project="hierarchical MARL", entity="637-muiltagent", name=name, notes='one')
         # self.episode_limit = 100
         # self.view_field = args.map_size
         # self.num_neighbor = args.n_agents - 1
@@ -304,19 +307,14 @@ class EpisodeRunner:
         handles = self.env.get_handles()
         # self.env.add_walls(method="random", n=self.n_agents * 2 * self.args.more_walls)
         # self.env.add_agents(handles[0], method="random", n=self.n_agents)
-        if self.args.env_name == 'multi_target':
+        if self.args.env_name == 'multi_target' or self.args.env_name == 'multi_target_hard':
             # self.env.add_walls(method="random", n=self.n_agents * 2 * self.args.more_walls)
             self.env.add_agents(handles[1],
                                 method="custom",
                                 n=self.n_agents + self.args.more_enemy,
                                 pos=[(1, 1), (1, self.args.map_size - 2), (self.args.map_size - 2, 1), (self.args.map_size - 2, self.args.map_size - 2)])
-            # self.env.add_agents(handles[1],
-            #                     method="custom",
-            #                     n=self.n_agents + self.args.more_enemy,
-            #                     pos=[(1, 1), (self.args.map_size - 2, self.args.map_size - 2)])
-            self.env.add_agents(handles[1], method="random", n=self.n_agents + self.args.more_enemy)
             self.env.add_agents(handles[0], method="random", n=self.n_agents)
-        elif self.args.env_name == 'bridge':
+        elif self.args.env_name == 'bridge_base':
             self.generate_map(handles)
         else:
             # self.env.add_walls(method="random", n=self.n_agents * 2 * self.args.more_walls)
@@ -324,6 +322,17 @@ class EpisodeRunner:
             self.env.add_agents(handles[0], method="random", n=self.n_agents)
 
         while not terminated:
+            num_agents = self.env.get_num(handles[0])
+            fixed_num_agents = self.env.get_num(handles[1])
+            if num_agents < self.n_agents:
+                self.env.add_agents(handles[0], method="random", n=self.n_agents - num_agents)
+            if fixed_num_agents < (self.n_agents + self.args.more_enemy):
+                if 'pursuit' in self.args.env_name:
+                    self.env.add_agents(handles[1], method="random", n=(self.n_agents + self.args.more_enemy) - fixed_num_agents)
+                elif 'bridge' in self.args.env_name:
+                    pos = [(1, 1)]
+                    self.env.add_agents(handles[1], method="custom", pos=pos)
+
             obs_all = self.env.get_observation(handles[0])
             fixed_obs_all = self.env.get_observation(handles[1])
             view = obs_all[0]
@@ -333,6 +342,7 @@ class EpisodeRunner:
             obs = []
             fixed_obs = []
             state = self.env.get_global_minimap(self.args.mini_map_shape, self.args.mini_map_shape).flatten()
+            # print(self.n_agents, self.env.get_num(handles[0]))
 
             for j in range(self.n_agents):
                 obs.append(np.concatenate([view[j].flatten(), feature[j]]))
@@ -362,7 +372,7 @@ class EpisodeRunner:
             self.env.set_action(handles[1], acts[1])
             terminated = self.env.step()
             reward = sum(self.env.get_reward(handles[0]))
-            if self.args.env_name == 'bridge':
+            if self.args.env_name == 'bridge_base':
                 pos = self.env.get_pos(handles[0])
                 reward += self.get_bridge_reward(pos)
             for fr in self.env.get_reward(handles[1]):
@@ -469,24 +479,37 @@ class EpisodeRunner:
         self.env.add_walls(pos=pos, method="custom")
 
         # pos = [(2, 2), (map_size - 3, 2), (map_size - 3, map_size - 3),  (2, map_size - 3)]
-        pos = [(self.args.map_size - 3, self.args.map_size - 3), (2, self.args.map_size - 3), (2, 2), (self.args.map_size - 3, 2)]
+        # pos = [(self.args.map_size - 3, self.args.map_size - 3),  (2, self.args.map_size - 3), (2, 2), (self.args.map_size - 3, 2)]
+        pos = []
+        for i in range(self.n_agents):
+            if i < 2:
+                p = (np.random.randint(1, self.args.map_size - 2), np.random.randint(self.args.map_size - 4, self.args.map_size - 2))
+                while p in pos:
+                    p = (np.random.randint(1, self.args.map_size - 2), np.random.randint(self.args.map_size - 4, self.args.map_size - 2))
+                # pos.append(p)
+            else:
+                p = (np.random.randint(1, self.args.map_size - 2), np.random.randint(1, 4))
+                while p in pos:
+                    p = (np.random.randint(1, self.args.map_size - 2), np.random.randint(1, 4))
+                # pos.append(p)
+            pos.append(p)
         self.env.add_agents(handles[0], method="custom", pos=pos)
 
-        pos = [(self.args.map_size - 2, self.args.map_size - 2)]
+        pos = [(self.args.map_size - 2, self.args.map_size - 2), (5, 5)]
         self.env.add_agents(handles[1], method="custom", pos=pos)
 
     def get_bridge_reward(self, pos):
         reward = 0
         for i in range(2):
             if pos[i][0] >= 1 and pos[i][0] <= self.args.map_size - 1 and pos[i][1] >= 1 and pos[i][1] <= 3:
-                reward += 1
+                reward += 0.1 * (3 - pos[i][1])
             else:
                 reward -= 0
             if pos[i][1] > 3:
                 reward += 0.1 * (3 - pos[i][1])
         for i in range(2, self.n_agents):
             if pos[i][0] >= 1 and pos[i][0] <= self.args.map_size - 1 and pos[i][1] >= 7 and pos[i][1] <= self.args.map_size - 1:
-                reward += 1
+                reward += 0.1 * (pos[i][1] - 7)
             else:
                 reward -= 0
             if pos[i][1] < 7:
