@@ -9,7 +9,7 @@ import magent
 import wandb
 import os
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 # wandb.config.update(args)
 
@@ -165,15 +165,52 @@ def get_config_pursuit_attack(map_size):
     return cfg
 
 
-class EpisodeRunner:
+def get_config_pursuit_attack_ez(map_size):
+    gw = magent.gridworld
+    cfg = gw.Config()
+    # args.map_size = 12
+    # args.n_agents = 3
+    # args.more_walls = 0
+    # args.more_enemy = 0
+    # args.random_num = 1
+    # args.mini_map_shape = 6  # battle:20 pursuit:30
+    # map_size = args.map_size
 
+    cfg.set({"map_width": map_size, "map_height": map_size})
+
+    # -0.3 -0.15 0
+    predator = cfg.register_agent_type("predator", {'width': 1, 'length': 1, 'hp': 1, 'speed': 1, 'view_range': gw.CircleRange(5), 'attack_range': gw.CircleRange(1), 'attack_penalty': 0})
+
+    prey = cfg.register_agent_type("prey", {'width': 1, 'length': 1, 'hp': 2, 'speed': 0, 'step_recover': 2, 'view_range': gw.CircleRange(4), 'attack_range': gw.CircleRange(0)})
+
+    predator_group = cfg.add_group(predator)
+    prey_group = cfg.add_group(prey)
+
+    a = gw.AgentSymbol(predator_group, index='any')
+    b = gw.AgentSymbol(predator_group, index='any')
+    c = gw.AgentSymbol(prey_group, index='any')
+
+    # tigers get reward when they attack a deer simultaneously
+    e1 = gw.Event(a, 'attack', c)
+    e2 = gw.Event(b, 'attack', c)
+    cfg.add_reward_rule(e1 & e2, receiver=[a, b], value=[0.5, 0.5])
+
+    # a = gw.AgentSymbol(predator_group, index='any')
+    # b = gw.AgentSymbol(prey_group, index='any')
+
+    # cfg.add_reward_rule(gw.Event(a, 'attack', b), receiver=[a, b], value=[1, -1])
+
+    return cfg
+
+
+class EpisodeRunner:
     def __init__(self, args, logger):
         # print('EpisodeRunner init')
         self.args = args
         self.logger = logger
         self.batch_size = self.args.batch_size_run
         assert self.batch_size == 1
-        self.args.env_name = 'bridge_base'
+        self.args.env_name = 'pursuit_easy'
         if self.args.env_name == 'pursuit_hard':
             map_size = 6
             self.args.map_size = map_size
@@ -181,6 +218,14 @@ class EpisodeRunner:
             self.args.more_enemy = 0
             self.args.more_walls = 0
             cfg = get_config_pursuit_attack(map_size)
+            env = magent.GridWorld(cfg)
+        elif args.env_name == 'pursuit_easy':
+            map_size = 12
+            self.args.map_size = map_size
+            self.n_agents = 3
+            self.args.more_enemy = 0
+            self.args.more_walls = 0
+            cfg = get_config_pursuit_attack_ez(map_size)
             env = magent.GridWorld(cfg)
         elif self.args.env_name == 'multi_target':
             map_size = 15  # 80 30
@@ -230,8 +275,8 @@ class EpisodeRunner:
         self.state_shape = state_shape
         self.coding = False
         if not self.coding:
-            name = 'cds_' + self.args.env_name + '_12a'
-            wandb.init(project="hierarchical MARL", entity="637-muiltagent", name=name, notes='one')
+            name = 'cds_' + self.args.env_name + '_01a'
+            wandb.init(project="hierarchical MARL", entity="637-muiltagent", name=name, notes='0')
         # self.episode_limit = 100
         # self.view_field = args.map_size
         # self.num_neighbor = args.n_agents - 1
