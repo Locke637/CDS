@@ -8,147 +8,49 @@ from components.episode_buffer import EpisodeBatch
 import magent
 import wandb
 import os
+import random
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+# os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+# os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+# os.environ['CUDA_VISIBLE_DEVICES'] = '3'
 
 # wandb.config.update(args)
 
-
-def get_config_double_attack_hard(map_size):
+def get_config_simple(args):
     gw = magent.gridworld
     cfg = gw.Config()
-    # alg_args.map_size = 10  # 80 30
-    # alg_args.n_agents = 4  # 6
-    # alg_args.more_walls = 0
-    # alg_args.more_enemy = -3
-    # alg_args.random_num = 1
-    # alg_args.mini_map_shape = 6  # battle:20 pursuit:30
-    # map_size = alg_args.map_size
-
-    cfg.set({"map_width": map_size, "map_height": map_size})
-
-    predator = cfg.register_agent_type("predator", {'width': 1, 'length': 1, 'hp': 1, 'speed': 1, 'damage': 1, 'view_range': gw.CircleRange(5), 'attack_range': gw.CircleRange(1), 'attack_penalty': 0})
-
-    prey = cfg.register_agent_type("prey", {'width': 1, 'length': 1, 'hp': 2, 'step_recover': 2, 'speed': 1, 'view_range': gw.CircleRange(4), 'attack_range': gw.CircleRange(0)})
-
-    predator_group = cfg.add_group(predator)
-    prey_group = cfg.add_group(prey)
-
-    a = gw.AgentSymbol(predator_group, index='any')
-    b = gw.AgentSymbol(predator_group, index='any')
-    c = gw.AgentSymbol(prey_group, index='any')
-
-    # tigers get reward when they attack a deer simultaneously
-    e1 = gw.Event(a, 'attack', c)
-    e2 = gw.Event(b, 'attack', c)
-    cfg.add_reward_rule(e1 & e2, receiver=[a, b, c], value=[0.75, 0.75, 1])
-
-    # a = gw.AgentSymbol(predator_group, index='any')
-    # b = gw.AgentSymbol(prey_group, index='any')
-
-    # cfg.add_reward_rule(gw.Event(a, 'attack', c), receiver=[a, c], value=[1, -1])
-    cfg.add_reward_rule(gw.Event(a, 'kill', c), receiver=[a, c], value=[-150, 0])
-    cfg.add_reward_rule(gw.Event(b, 'kill', c), receiver=[b, c], value=[-150, 0])
-
-    return cfg
-
-
-def get_config_multi_target(map_size):
-    gw = magent.gridworld
-    cfg = gw.Config()
-    # args.map_size = 15  # 80 30
-    # args.n_agents = 4  # 6
-    # args.more_walls = 0
-    # args.more_enemy = 0
-    # args.random_num = 1
-    # args.mini_map_shape = 6  # battle:20 pursuit:30
-    # map_size = args.map_size
+    args.map_size = 7  # 80 30
+    args.n_agents = 4  # 6
+    args.more_walls = 0
+    args.more_enemy = -3
+    args.random_num = 1
+    args.mini_map_shape = 3  # battle:20 pursuit:30
+    # anneal_steps = 500
+    # args.anneal_epsilon = (args.epsilon - args.min_epsilon) / anneal_steps
+    args.epsilon_anneal_time = 500
+    args.n_epoch = 40001
+    args.t_max = 40001 * 1
+    args.prey_hp = 2
+    args.attack_penalty = -1.5
+    # args.attack_penalty = 0
+    args.episode_limit = 1
+    map_size = args.map_size
 
     cfg.set({"map_width": map_size, "map_height": map_size})
 
     predator = cfg.register_agent_type("predator", {
         'width': 1,
         'length': 1,
-        'hp': 1,
-        'speed': 1,
+        'hp': 100,
+        'speed': 0,
         'damage': 1,
-        'view_range': gw.CircleRange(5),
+        'view_range': gw.CircleRange(2),
         'attack_range': gw.CircleRange(1),
-        'attack_penalty': -0.1
+        'attack_penalty': args.attack_penalty
     })
 
-    prey = cfg.register_agent_type("prey", {'width': 1, 'length': 1, 'hp': 1, 'step_recover': 1, 'speed': 0, 'view_range': gw.CircleRange(4), 'attack_range': gw.CircleRange(0)})
-
-    predator_group = cfg.add_group(predator)
-    prey_group = cfg.add_group(prey)
-
-    a = gw.AgentSymbol(predator_group, index='any')
-    # b = gw.AgentSymbol(predator_group, index='any')
-    c = gw.AgentSymbol(prey_group, 0)
-    cmax = gw.AgentSymbol(prey_group, 1)
-    b = gw.AgentSymbol(prey_group, 2)
-    bmax = gw.AgentSymbol(prey_group, 3)
-
-    # # tigers get reward when they attack a deer simultaneously
-    # e1 = gw.Event(a, 'attack', c)
-    # e2 = gw.Event(b, 'attack', c)
-    # cfg.add_reward_rule(e1 & e2, receiver=[a, b], value=[0.75, 0.75])
-
-    # a = gw.AgentSymbol(predator_group, index='any')
-    # b = gw.AgentSymbol(prey_group, index='any')
-
-    cfg.add_reward_rule(gw.Event(a, 'attack', c), receiver=[a, c], value=[0.1, 1])
-    cfg.add_reward_rule(gw.Event(a, 'kill', c), receiver=[a, c], value=[-10, 0])
-
-    cfg.add_reward_rule(gw.Event(a, 'attack', cmax), receiver=[a, cmax], value=[0.2, 1])
-    cfg.add_reward_rule(gw.Event(a, 'kill', cmax), receiver=[a, cmax], value=[-20, 0])
-
-    cfg.add_reward_rule(gw.Event(a, 'attack', b), receiver=[a, b], value=[0.3, 1])
-    cfg.add_reward_rule(gw.Event(a, 'kill', b), receiver=[a, b], value=[-30, 0])
-
-    cfg.add_reward_rule(gw.Event(a, 'attack', bmax), receiver=[a, bmax], value=[0.4, 1])
-    cfg.add_reward_rule(gw.Event(a, 'kill', bmax), receiver=[a, bmax], value=[-40, 0])
-
-    return cfg
-
-
-def get_config_bridge(map_size):
-    gw = magent.gridworld
-    cfg = gw.Config()
-    # args.map_size = 11  # 80 30
-    # args.n_agents = 4  # 6
-    # args.more_walls = 1
-    # args.more_enemy = -3
-    # args.random_num = 1
-    # args.mini_map_shape = 6  # battle:20 pursuit:30
-    # map_size = args.map_size
-
-    cfg.set({"map_width": map_size, "map_height": map_size})
-
-    predator = cfg.register_agent_type("predator", {'width': 1, 'length': 1, 'hp': 1, 'speed': 1, 'damage': 2, 'view_range': gw.CircleRange(5), 'attack_range': gw.CircleRange(1), 'attack_penalty': 0})
-
-    prey = cfg.register_agent_type("prey", {'width': 1, 'length': 1, 'hp': 1, 'step_recover': 0, 'speed': 0, 'view_range': gw.CircleRange(4), 'attack_range': gw.CircleRange(0)})
-
-    predator_group = cfg.add_group(predator)
-    prey_group = cfg.add_group(prey)
-
-    # a = gw.AgentSymbol(predator_group, index='any')
-    # b = gw.AgentSymbol(prey_group, index='any')
-    # cfg.add_reward_rule(gw.Event(a, 'attack', b), receiver=[a, b], value=[0.1, 1])
-
-    return cfg
-
-
-def get_config_pursuit_attack(map_size):
-    gw = magent.gridworld
-    cfg = gw.Config()
-
-    cfg.set({"map_width": map_size, "map_height": map_size})
-
-    # -0.3 -0.15 0
-    predator = cfg.register_agent_type("predator", {'width': 1, 'length': 1, 'hp': 1, 'speed': 1, 'view_range': gw.CircleRange(5), 'attack_range': gw.CircleRange(1), 'attack_penalty': -0.2})
-
-    prey = cfg.register_agent_type("prey", {'width': 1, 'length': 1, 'hp': 1, 'speed': 0, 'view_range': gw.CircleRange(4), 'attack_range': gw.CircleRange(0)})
+    prey = cfg.register_agent_type("prey", {'width': 1, 'length': 1, 'hp': args.prey_hp, 'step_recover': 2, 'speed': 0, 'view_range': gw.CircleRange(4), 'attack_range': gw.CircleRange(0)})
 
     predator_group = cfg.add_group(predator)
     prey_group = cfg.add_group(prey)
@@ -160,26 +62,37 @@ def get_config_pursuit_attack(map_size):
     # tigers get reward when they attack a deer simultaneously
     e1 = gw.Event(a, 'attack', c)
     e2 = gw.Event(b, 'attack', c)
-    cfg.add_reward_rule(e1 & e2, receiver=[a, b], value=[0.5, 0.5])
+    # cfg.add_reward_rule(e1 & e2, receiver=[a, b, c], value=[0.75, 0.75, 1])
+    cfg.add_reward_rule(e1 & e2, receiver=[a, b, c], value=[1, 1, 1])
 
     # a = gw.AgentSymbol(predator_group, index='any')
     # b = gw.AgentSymbol(prey_group, index='any')
 
-    # cfg.add_reward_rule(gw.Event(a, 'attack', b), receiver=[a, b], value=[1, -1])
+    # cfg.add_reward_rule(gw.Event(a, 'attack', c), receiver=[a, c], value=[1, -1])
+    # cfg.add_reward_rule(gw.Event(a, 'kill', c), receiver=[a, c], value=[-0, 0])
+    # cfg.add_reward_rule(gw.Event(b, 'kill', c), receiver=[b, c], value=[-0, 0])
+    cfg.add_reward_rule(gw.Event(a, 'kill', c), receiver=[a, c], value=[-10, 0])
+    cfg.add_reward_rule(gw.Event(b, 'kill', c), receiver=[b, c], value=[-10, 0])
 
-    return cfg
+    return cfg, args
 
 
-def get_config_pursuit_attack_ez(map_size):
+def get_config_pursuit_attack_ez(args):
     gw = magent.gridworld
     cfg = gw.Config()
-    # args.map_size = 12
-    # args.n_agents = 3
-    # args.more_walls = 0
-    # args.more_enemy = 0
-    # args.random_num = 1
-    # args.mini_map_shape = 6  # battle:20 pursuit:30
-    # map_size = args.map_size
+    args.map_size = 6
+    args.n_agents = 3
+    args.more_walls = 0
+    args.more_enemy = 0
+    args.random_num = 1
+    args.mini_map_shape = 6  # battle:20 pursuit:30
+    # anneal_steps = 700000 * 1
+    # args.anneal_epsilon = (args.epsilon - args.min_epsilon) / anneal_steps
+    args.epsilon_anneal_time = 700000
+    args.t_max = 10001 * 50
+    args.n_epoch = 10001
+    args.episode_limit = 100
+    map_size = args.map_size
 
     cfg.set({"map_width": map_size, "map_height": map_size})
 
@@ -198,30 +111,256 @@ def get_config_pursuit_attack_ez(map_size):
     # tigers get reward when they attack a deer simultaneously
     e1 = gw.Event(a, 'attack', c)
     e2 = gw.Event(b, 'attack', c)
-    cfg.add_reward_rule(e1 & e2, receiver=[a, b], value=[0.5, 0.5])
+    cfg.add_reward_rule(e1 & e2, receiver=[a, b, c], value=[0.5, 0.5, 1])
 
     # a = gw.AgentSymbol(predator_group, index='any')
     # b = gw.AgentSymbol(prey_group, index='any')
 
     # cfg.add_reward_rule(gw.Event(a, 'attack', b), receiver=[a, b], value=[1, -1])
 
-    return cfg
+    return cfg, args
 
 
-def get_config_multi_target_hard(map_size):
+def get_config_double_attack_hard(args):
     gw = magent.gridworld
     cfg = gw.Config()
-    # args.map_size = 12  # 15
-    # args.n_agents = 4  # 6
-    # args.more_walls = 0
-    # args.more_enemy = -2
-    # args.random_num = 1
-    # args.mini_map_shape = 6  # battle:20 pursuit:30
-    # map_size = args.map_size
+    args.map_size = 10  # 12
+    args.n_agents = 4  # 6
+    args.more_walls = 0
+    args.more_enemy = -3
+    args.random_num = 1
+    args.mini_map_shape = 6  # battle:20 pursuit:30
+    # anneal_steps = 700000
+    # args.anneal_epsilon = (args.epsilon - args.min_epsilon) / anneal_steps
+    args.epsilon_anneal_time = 700000
+    args.n_epoch = 40001
+    args.t_max = 40001 * 50
+    args.prey_recover = 2
+    args.attack_penalty = -0.1  # -0.03
+    args.env_view_range = 3
+    args.episode_limit = 50
+    map_size = args.map_size
 
     cfg.set({"map_width": map_size, "map_height": map_size})
 
-    predator = cfg.register_agent_type("predator", {'width': 1, 'length': 1, 'hp': 1, 'speed': 1, 'damage': 1, 'view_range': gw.CircleRange(5), 'attack_range': gw.CircleRange(1), 'attack_penalty': 0})
+    predator = cfg.register_agent_type("predator", {
+        'width': 1,
+        'length': 1,
+        'hp': 10,
+        'speed': 1,
+        'damage': 1,
+        'view_range': gw.CircleRange(args.env_view_range),
+        'attack_range': gw.CircleRange(1),
+        'attack_penalty': args.attack_penalty
+    })
+
+    prey = cfg.register_agent_type("prey", {'width': 1, 'length': 1, 'hp': 2, 'step_recover': args.prey_recover, 'speed': 1, 'view_range': gw.CircleRange(4), 'attack_range': gw.CircleRange(0)})
+
+    predator_group = cfg.add_group(predator)
+    prey_group = cfg.add_group(prey)
+
+    a = gw.AgentSymbol(predator_group, index='any')
+    b = gw.AgentSymbol(predator_group, index='any')
+    c = gw.AgentSymbol(prey_group, index='any')
+
+    # tigers get reward when they attack a deer simultaneously
+    e1 = gw.Event(a, 'attack', c)
+    e2 = gw.Event(b, 'attack', c)
+    # cfg.add_reward_rule(e1 & e2, receiver=[a, b, c], value=[0.75, 0.75, 1])
+    cfg.add_reward_rule(e1 & e2, receiver=[a, b, c], value=[0.5, 0.5, 1])
+
+    # a = gw.AgentSymbol(predator_group, index='any')
+    # b = gw.AgentSymbol(prey_group, index='any')
+
+    # cfg.add_reward_rule(gw.Event(a, 'attack', c), receiver=[a, c], value=[1, -1])
+    # cfg.add_reward_rule(gw.Event(a, 'kill', c), receiver=[a, c], value=[-150, 0])
+    # cfg.add_reward_rule(gw.Event(b, 'kill', c), receiver=[b, c], value=[-150, 0])
+    cfg.add_reward_rule(gw.Event(a, 'kill', c), receiver=[a, c], value=[-1, 0])
+    cfg.add_reward_rule(gw.Event(b, 'kill', c), receiver=[b, c], value=[-1, 0])
+
+    return cfg, args
+
+
+def get_config_multi_target(args):
+    gw = magent.gridworld
+    cfg = gw.Config()
+    args.map_size = 7  # 80 30
+    args.n_agents = 4  # 6
+    args.more_walls = 0
+    args.more_enemy = -3
+    args.random_num = 1
+    args.mini_map_shape = 6  # battle:20 pursuit:30
+    # anneal_steps = 100000
+    # args.anneal_epsilon = (args.epsilon - args.min_epsilon) / anneal_steps
+    # args.n_epoch = 50001
+    args.epsilon_anneal_time = 100000
+    args.n_epoch = 50001
+    args.t_max = 50001 * 10
+    map_size = args.map_size
+    args.sample_times = 1
+    args.episode_limit = 10
+    args.c_lr = 2
+    args.a_lr = 1
+
+    cfg.set({"map_width": map_size, "map_height": map_size})
+
+    predator = cfg.register_agent_type("predator", {
+        'width': 1,
+        'length': 1,
+        'hp': 1,
+        'speed': 1,
+        'damage': 1,
+        'view_range': gw.CircleRange(2),
+        'attack_range': gw.CircleRange(1),
+        'attack_penalty': 0
+    })
+
+    prey = cfg.register_agent_type("prey", {'width': 1, 'length': 1, 'hp': 2, 'step_recover': 2, 'speed': 0, 'view_range': gw.CircleRange(4), 'attack_range': gw.CircleRange(0)})
+
+    predator_group = cfg.add_group(predator)
+    prey_group = cfg.add_group(prey)
+
+    a = gw.AgentSymbol(predator_group, index='any')
+    b = gw.AgentSymbol(predator_group, index='any')
+    c = gw.AgentSymbol(prey_group, index='any')
+
+    # tigers get reward when they attack a deer simultaneously
+    e1 = gw.Event(a, 'attack', c)
+    e2 = gw.Event(b, 'attack', c)
+    # cfg.add_reward_rule(e1 & e2, receiver=[a, b, c], value=[0.75, 0.75, 1])
+    cfg.add_reward_rule(e1 & e2, receiver=[a, b, c], value=[1, 1, 1])
+
+    # a = gw.AgentSymbol(predator_group, index='any')
+    # b = gw.AgentSymbol(prey_group, index='any')
+
+    # cfg.add_reward_rule(gw.Event(a, 'attack', c), receiver=[a, c], value=[1, -1])
+    # cfg.add_reward_rule(gw.Event(a, 'kill', c), receiver=[a, c], value=[-150, 0])
+    # cfg.add_reward_rule(gw.Event(b, 'kill', c), receiver=[b, c], value=[-150, 0])
+    cfg.add_reward_rule(gw.Event(a, 'kill', c), receiver=[a, c], value=[-100, 0])
+    cfg.add_reward_rule(gw.Event(b, 'kill', c), receiver=[b, c], value=[-100, 0])
+
+    return cfg, args
+
+
+def get_config_bridge(args):
+    gw = magent.gridworld
+    cfg = gw.Config()
+    args.map_size = 11  # 80 30
+    args.n_agents = 4  # 6
+    args.more_walls = 0
+    args.more_enemy = -2
+    args.random_num = 1
+    args.mini_map_shape = 6  # battle:20 pursuit:30
+    # anneal_steps = 700000 * 1
+    # args.anneal_epsilon = (args.epsilon - args.min_epsilon) / anneal_steps
+    # args.n_epoch = 40001
+    args.epsilon_anneal_time = 700000
+    args.n_epoch = 40001
+    args.t_max = 40001 * 50
+    args.prey_hp = 1
+    args.attack_penalty = -0.03
+    args.episode_limit = 100
+    map_size = args.map_size
+
+    cfg.set({"map_width": map_size, "map_height": map_size})
+
+    predator = cfg.register_agent_type("predator", {
+        'width': 1,
+        'length': 1,
+        'hp': 100,
+        'speed': 1,
+        'damage': 1,
+        'view_range': gw.CircleRange(4),
+        'attack_range': gw.CircleRange(1),
+        'attack_penalty': args.attack_penalty
+    })
+
+    prey = cfg.register_agent_type("prey", {'width': 1, 'length': 1, 'hp': args.prey_hp, 'step_recover': 1, 'speed': 0, 'view_range': gw.CircleRange(4), 'attack_range': gw.CircleRange(0)})
+
+    predator_group = cfg.add_group(predator)
+    prey_group = cfg.add_group(prey)
+
+    # a = gw.AgentSymbol(predator_group, index='any')
+    # b = gw.AgentSymbol(prey_group, index='any')
+    # cfg.add_reward_rule(gw.Event(a, 'attack', b), receiver=[a, b], value=[0.1, 1])
+
+    return cfg, args
+
+
+def get_config_pursuit_attack(args):
+    gw = magent.gridworld
+    cfg = gw.Config()
+    args.map_size = 6
+    args.n_agents = 3
+    args.more_walls = 0
+    args.more_enemy = 0
+    args.random_num = 1
+    args.mini_map_shape = 6  # battle:20 pursuit:30
+    # anneal_steps = 700000 * 0.5
+    # args.anneal_epsilon = (args.epsilon - args.min_epsilon) / anneal_steps
+    # args.n_epoch = 20001
+    args.t_max = 20001 * 50
+    args.episode_limit = 50
+    map_size = args.map_size
+
+    cfg.set({"map_width": map_size, "map_height": map_size})
+
+    # -0.3 -0.15 0
+    predator = cfg.register_agent_type("predator", {'width': 1, 'length': 1, 'hp': 1, 'speed': 1, 'view_range': gw.CircleRange(2), 'attack_range': gw.CircleRange(1), 'attack_penalty': -0.3})
+
+    prey = cfg.register_agent_type("prey", {'width': 1, 'length': 1, 'hp': 2, 'speed': 0, 'step_recover': 2, 'view_range': gw.CircleRange(4), 'attack_range': gw.CircleRange(0)})
+
+    predator_group = cfg.add_group(predator)
+    prey_group = cfg.add_group(prey)
+
+    a = gw.AgentSymbol(predator_group, index='any')
+    b = gw.AgentSymbol(predator_group, index='any')
+    c = gw.AgentSymbol(prey_group, index='any')
+
+    # tigers get reward when they attack a deer simultaneously
+    e1 = gw.Event(a, 'attack', c)
+    e2 = gw.Event(b, 'attack', c)
+    cfg.add_reward_rule(e1 & e2, receiver=[a, b, c], value=[0.5, 0.5, 1])
+
+    # a = gw.AgentSymbol(predator_group, index='any')
+    # b = gw.AgentSymbol(prey_group, index='any')
+
+    # cfg.add_reward_rule(gw.Event(a, 'attack', b), receiver=[a, b], value=[1, -1])
+
+    return cfg, args
+
+
+def get_config_multi_target_hard(args):
+    gw = magent.gridworld
+    cfg = gw.Config()
+    args.map_size = 12  # 12
+    args.n_agents = 4  # 6
+    args.more_walls = 0
+    args.more_enemy = -2
+    args.random_num = 1
+    args.mini_map_shape = 6  # battle:20 pursuit:30
+    # anneal_steps = 700000 * 1
+    # args.anneal_epsilon = (args.epsilon - args.min_epsilon) / anneal_steps
+    # args.n_epoch = 40001
+    args.epsilon_anneal_time = 700000
+    args.n_epoch = 40001
+    args.t_max = 40001 * 50
+    map_size = args.map_size
+    args.attack_penalty = -0.2
+    args.episode_limit = 50
+
+    cfg.set({"map_width": map_size, "map_height": map_size})
+
+    predator = cfg.register_agent_type("predator", {
+        'width': 1,
+        'length': 1,
+        'hp': 1,
+        'speed': 1,
+        'damage': 1,
+        'view_range': gw.CircleRange(5),
+        'attack_range': gw.CircleRange(1),
+        'attack_penalty': args.attack_penalty
+    })
 
     prey = cfg.register_agent_type("prey", {'width': 1, 'length': 1, 'hp': 2, 'step_recover': 2, 'speed': 0, 'view_range': gw.CircleRange(4), 'attack_range': gw.CircleRange(0)})
 
@@ -237,84 +376,124 @@ def get_config_multi_target_hard(map_size):
 
     e1 = gw.Event(a, 'attack', c)
     e2 = gw.Event(b, 'attack', c)
-    cfg.add_reward_rule(e1 & e2, receiver=[a, b, c], value=[0.1, 0.1, 1])
+    # cfg.add_reward_rule(e1 & e2, receiver=[a, b, c], value=[0.1, 0.1, 1])
+    cfg.add_reward_rule(e1 & e2, receiver=[a, b, c], value=[0.25, 0.25, 1])
 
     e3 = gw.Event(a, 'kill', c)
     e4 = gw.Event(b, 'kill', c)
-    cfg.add_reward_rule(e3 & e4, receiver=[a, b, c], value=[-10, -10, 0])
+    cfg.add_reward_rule(e3 & e4, receiver=[a, b, c], value=[-20, -20, 0])  #-10
 
     e5 = gw.Event(a, 'attack', cmax)
     e6 = gw.Event(b, 'attack', cmax)
-    cfg.add_reward_rule(e5 & e6, receiver=[a, b, cmax], value=[0.2, 0.2, 1])
+    # cfg.add_reward_rule(e5 & e6, receiver=[a, b, cmax], value=[0.2, 0.2, 1])
+    cfg.add_reward_rule(e5 & e6, receiver=[a, b, cmax], value=[0.5, 0.5, 1])
 
     e7 = gw.Event(a, 'kill', cmax)
     e8 = gw.Event(b, 'kill', cmax)
-    cfg.add_reward_rule(e7 & e8, receiver=[a, b, cmax], value=[-20, -20, 0])
-    return cfg
+    cfg.add_reward_rule(e7 & e8, receiver=[a, b, cmax], value=[-40, -40, 0])  #-20
+    return cfg, args
 
 class EpisodeRunner:
+
     def __init__(self, args, logger):
         # print('EpisodeRunner init')
         self.args = args
         self.logger = logger
         self.batch_size = self.args.batch_size_run
         assert self.batch_size == 1
-        self.args.env_name = 'bridge_base'
+        self.args.env_name = 'simple'
         if self.args.env_name == 'pursuit_hard':
-            map_size = 6
-            self.args.map_size = map_size
-            self.n_agents = 3
-            self.args.more_enemy = 0
-            self.args.more_walls = 0
-            cfg = get_config_pursuit_attack(map_size)
+            # map_size = 6
+            # self.args.map_size = map_size
+            # self.n_agents = 3
+            # self.args.more_enemy = 0
+            # self.args.more_walls = 0
+            cfg, self.args = get_config_pursuit_attack(self.args)
+            # print(self.args)
             env = magent.GridWorld(cfg)
+            self.episode_limit = self.args.episode_limit
+            self.n_agents = self.args.n_agents
+            self.test_interval = 10 * self.args.episode_limit
+            self.total_steps = self.args.episode_limit * 10000
+        elif args.env_name == 'simple':
+            # map_size = 6
+            # self.args.map_size = map_size
+            # self.n_agents = 3
+            # self.args.more_enemy = 0
+            # self.args.more_walls = 0
+            cfg, self.args = get_config_simple(self.args)
+            env = magent.GridWorld(cfg)
+            self.episode_limit = self.args.episode_limit
+            self.n_agents = self.args.n_agents
+            self.test_interval = 10 * self.args.episode_limit
+            self.total_steps = self.args.episode_limit * 40000
         elif args.env_name == 'pursuit_easy':
-            map_size = 6
-            self.args.map_size = map_size
-            self.n_agents = 3
-            self.args.more_enemy = 0
-            self.args.more_walls = 0
-            cfg = get_config_pursuit_attack_ez(map_size)
+            # map_size = 6
+            # self.args.map_size = map_size
+            # self.n_agents = 3
+            # self.args.more_enemy = 0
+            # self.args.more_walls = 0
+            cfg, self.args = get_config_pursuit_attack_ez(self.args)
             env = magent.GridWorld(cfg)
+            self.episode_limit = self.args.episode_limit
+            self.n_agents = self.args.n_agents
+            self.test_interval = 1 * self.args.episode_limit
+            self.total_steps = self.args.episode_limit * 10000
         elif self.args.env_name == 'multi_target':
-            map_size = 15  # 80 30
-            self.args.map_size = map_size
-            self.n_agents = 4  # 6
-            self.args.more_enemy = 0
-            self.args.more_walls = 0
-            cfg = get_config_multi_target(map_size)
+            # map_size = 15  # 80 30
+            # self.args.map_size = map_size
+            # self.n_agents = 4  # 6
+            # self.args.more_enemy = 0
+            # self.args.more_walls = 0
+            cfg, self.args = get_config_multi_target(self.args)
             env = magent.GridWorld(cfg)
+            self.episode_limit = self.args.episode_limit
+            self.n_agents = self.args.n_agents
+            self.test_interval = 10 * self.args.episode_limit
+            self.total_steps = self.args.episode_limit * 50000
         elif args.env_name == 'multi_target_hard':
-            map_size = 12  # 80 30
-            self.args.map_size = map_size
-            self.n_agents = 4  # 6
-            self.args.more_enemy = -2
-            self.args.more_walls = 0
-            cfg = get_config_multi_target_hard(args)
+            # map_size = 12  # 80 30
+            # self.args.map_size = map_size
+            # self.n_agents = 4  # 6
+            # self.args.more_enemy = -2
+            # self.args.more_walls = 0
+            cfg, self.args = get_config_multi_target_hard(self.args)
             env = magent.GridWorld(cfg)
+            self.episode_limit = self.args.episode_limit
+            self.n_agents = self.args.n_agents
+            self.test_interval = 10 * self.args.episode_limit
+            self.total_steps = self.args.episode_limit * 40000
         elif self.args.env_name == 'double_attack':
-            map_size = 10  # 80 30
-            self.args.map_size = map_size
-            self.n_agents = 4  # 6
-            self.args.more_enemy = -3
-            self.args.more_walls = 0
-            cfg = get_config_double_attack_hard(map_size)
+            # map_size = 10  # 80 30
+            # self.args.map_size = map_size
+            # self.n_agents = 4  # 6
+            # self.args.more_enemy = -3
+            # self.args.more_walls = 0
+            cfg, self.args = get_config_double_attack_hard(self.args)
             env = magent.GridWorld(cfg)
+            self.episode_limit = self.args.episode_limit
+            self.n_agents = self.args.n_agents
+            self.test_interval = 10 * self.args.episode_limit
+            self.total_steps = self.args.episode_limit * 40000
         elif self.args.env_name == 'bridge_base':
-            map_size = 11  # 80 30
-            self.args.map_size = map_size
-            self.n_agents = 4  # 6
-            self.args.more_enemy = -2
-            self.args.more_walls = 0
-            cfg = get_config_bridge(map_size)
+            # map_size = 11  # 80 30
+            # self.args.map_size = map_size
+            # self.n_agents = 4  # 6
+            # self.args.more_enemy = -2
+            # self.args.more_walls = 0
+            cfg, self.args = get_config_bridge(self.args)
             env = magent.GridWorld(cfg)
+            self.episode_limit = self.args.episode_limit
+            self.n_agents = self.args.n_agents
+            self.test_interval = 1 * self.args.episode_limit
+            self.total_steps = self.args.episode_limit * 20000
         else:
             raise Exception('env name error')
             # Exception('env name error')
         # self.env = env_REGISTRY[self.args.env](**self.args.env_args)
         self.env = env
         self.n_actions = env.action_space[0][0]
-        self.episode_limit = 100
+        # self.episode_limit = 100
         handles = env.get_handles()
         feature_dim = env.get_feature_space(handles[0])
         view_dim = env.get_view_space(handles[0])
@@ -332,8 +511,8 @@ class EpisodeRunner:
         self.state_shape = state_shape
         self.coding = False
         if not self.coding:
-            name = 'cds_' + self.args.env_name + '_21a'
-            wandb.init(project="hierarchical MARL", entity="637-muiltagent", name=name, notes='*0.1')
+            name = 'cds_' + self.args.env_name + '_re'
+            wandb.init(project="hierarchical MARL", entity="637-muiltagent", name=name, notes='-0.2')
         # self.episode_limit = 100
         # self.view_field = args.map_size
         # self.num_neighbor = args.n_agents - 1
@@ -371,6 +550,8 @@ class EpisodeRunner:
         env_info["state_shape"] = self.state_shape
         # args.unit_dim = runner.env.get_unit_dim()
         env_info["obs_shape"] = self.obs_shape
+        env_info['test_interval'] = self.test_interval
+        env_info['tot_steps'] = self.total_steps
         return env_info
 
     def save_replay(self):
@@ -410,19 +591,19 @@ class EpisodeRunner:
         # self.env.add_walls(method="random", n=self.n_agents * 2 * self.args.more_walls)
         # self.env.add_agents(handles[0], method="random", n=self.n_agents)
         if self.args.env_name == 'multi_target' or self.args.env_name == 'multi_target_hard':
-            self.env.add_walls(method="random", n=self.n_agents * 2 * self.args.more_walls)
+            # self.env.add_walls(method="random", n=self.n_agents * 2 * self.args.more_walls)
             if not 'hard' in self.args.env_name:
                 self.env.add_agents(handles[1],
                                     method="custom",
                                     n=self.n_agents + self.args.more_enemy,
-                                    pos=[(1, 1), (1, self.args.map_size - 2), (self.args.map_size - 2, 1), (self.args.map_size - 2, self.args.map_size - 2)])
+                                    pos=[(self.args.map_size // 2, self.args.map_size // 2)])
             else:
                 self.env.add_agents(handles[1], method="custom", n=self.n_agents + self.args.more_enemy, pos=[(1, 1), (1, self.args.map_size - 2)])
             self.env.add_agents(handles[0], method="random", n=self.n_agents)
         elif self.args.env_name == 'bridge_base':
             self.generate_map(handles)
         else:
-            # self.env.add_walls(method="random", n=self.n_agents * 2 * self.args.more_walls)
+            self.env.add_walls(method="random", n=self.n_agents * 2 * self.args.more_walls)
             self.env.add_agents(handles[1], method="random", n=self.n_agents + self.args.more_enemy)
             self.env.add_agents(handles[0], method="random", n=self.n_agents)
 
@@ -453,7 +634,34 @@ class EpisodeRunner:
                 obs.append(np.concatenate([view[j].flatten(), feature[j]]))
                 # fixed_obs.append(np.concatenate([fixed_view[j].flatten(), fixed_feature[j]]))
 
-            pre_transition_data = {"state": [state], "avail_actions": [np.ones((self.n_agents, self.n_actions))], "obs": [obs]}
+            if 'simple' in self.args.env_name:
+                ban_index = np.random.randint(0, self.n_agents)
+            elif 'multi_target' in self.args.env_name:
+                if random.random() < 0.5:
+                    ban_index = random.sample(range(self.n_agents), 1)
+                else:
+                    ban_index = random.sample(range(self.n_agents), 2)
+            avail_actions = []
+            for agent_id in range(self.n_agents):
+                # avail_action = self.env.get_avail_agent_actions(agent_id)
+                # print(ban_index)
+                if 'simple' in self.args.env_name:
+                    if agent_id == ban_index:
+                        avail_action = np.zeros(self.n_actions)
+                        avail_action[0] = 1
+                    else:
+                        avail_action = np.ones(self.n_actions)
+                elif 'multi_target' in self.args.env_name:
+                    if agent_id in ban_index:
+                        avail_action = np.zeros(self.n_actions)
+                        avail_action[0] = 1
+                    else:
+                        avail_action = np.ones(self.n_actions)                
+                else:
+                    avail_action = np.ones(self.n_actions)
+                avail_actions.append(avail_action)
+
+            pre_transition_data = {"state": [state], "avail_actions": np.array(avail_actions), "obs": [obs]}
 
             self.batch.update(pre_transition_data, ts=self.t)
 
@@ -625,7 +833,7 @@ class EpisodeRunner:
             if pos[i][1] < 7:
                 reward += 0.01 * (pos[i][1] - 7)
         return reward
-    
+
     def get_bridge_win_rate(self, pos):
         reward = np.zeros(self.n_agents)
         for i in range(2):

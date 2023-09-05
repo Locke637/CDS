@@ -105,8 +105,6 @@ def run_sequential(args, logger):
     args.state_shape = env_info["state_shape"]
     # args.unit_dim = runner.env.get_unit_dim()
     args.obs_shape = env_info["obs_shape"]
-    args.test_interval = env_info["test_interval"]
-    args.t_max = env_info["tot_steps"]
 
     # Default/Base scheme
     scheme = {

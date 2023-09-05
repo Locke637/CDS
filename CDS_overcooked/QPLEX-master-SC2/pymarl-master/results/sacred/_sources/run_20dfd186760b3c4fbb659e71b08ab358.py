@@ -103,10 +103,8 @@ def run_sequential(args, logger):
     args.n_agents = env_info["n_agents"]
     args.n_actions = env_info["n_actions"]
     args.state_shape = env_info["state_shape"]
-    # args.unit_dim = runner.env.get_unit_dim()
+    args.unit_dim = runner.env.get_unit_dim()
     args.obs_shape = env_info["obs_shape"]
-    args.test_interval = env_info["test_interval"]
-    args.t_max = env_info["tot_steps"]
 
     # Default/Base scheme
     scheme = {
@@ -278,9 +276,9 @@ def run_sequential(args, logger):
         n_test_runs = max(1, args.test_nepisode // runner.batch_size)
         if (runner.t_env - last_test_T) / args.test_interval >= 1.0:
 
-            # logger.console_logger.info("t_env: {} / {}".format(runner.t_env, args.t_max))
-            # logger.console_logger.info("Estimated time left: {}. Time passed: {}".format(
-            #     time_left(last_time, last_test_T, runner.t_env, args.t_max), time_str(time.time() - start_time)))
+            logger.console_logger.info("t_env: {} / {}".format(runner.t_env, args.t_max))
+            logger.console_logger.info("Estimated time left: {}. Time passed: {}".format(
+                time_left(last_time, last_test_T, runner.t_env, args.t_max), time_str(time.time() - start_time)))
             last_time = time.time()
 
             last_test_T = runner.t_env
